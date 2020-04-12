@@ -1,6 +1,0 @@
-[
-  "test_database.py::test_connection",
-  "test_database.py::test_bad_connection",
-  "test_database.py::test_schema",
-  "test_database.py::test_query"
-]
