@@ -1,2 +1,5 @@
 loguru
 psycopg2
+pandas
+numpy
+pytest
