@@ -1,6 +1,5 @@
 from loguru import logger
 from typing import Dict, List, Tuple
-from configparser import ConfigParser
 import os
 from threading import Lock
 
@@ -10,6 +9,8 @@ from psycopg2 import pool
 from datetime import date, datetime
 import pandas as pd
 import numpy as np
+
+from shared import configuration
 
 class Database:
     "wrapper around a postgres database connection"
@@ -297,26 +298,6 @@ class DatabaseConnectionPool:
         self._pool = None
 
 # ----------------------------------
-def config(filename='database.ini', section='postgresql') -> Dict:
-    "read the configuration values out of an .ini file"
-    parser = ConfigParser()
-
-    for p in [".", "..", "../.."]:
-        file_path = os.path.join(p, filename)
-        if os.path.exists(file_path):
-            parser.read(file_path)
-            db = {}
-            if parser.has_section(section):
-                params = parser.items(section)
-                for param in params:
-                    db[param[0]] = param[1]
-            else:
-                raise Exception('Section {0} not found in the {1} file'.format(section, filename))
-            return db
-
-    raise Exception("Could not find {0}".format(filename))
-
-# ----------------------------------
 g_connection_pools = {}
 
 def find_pool(params: Dict) -> DatabaseConnectionPool:
@@ -325,18 +306,18 @@ def find_pool(params: Dict) -> DatabaseConnectionPool:
     host, db, user = params["host"], params["database"], params["user"]
     key = f"{host}|{db}|{user}"
 
-    pool = g_connection_pools.get(key)
+    xpool = g_connection_pools.get(key)
 
     # protect against multiple threads changing collection
     lock = Lock()
     lock.acquire()
     try:
-        if pool == None:
-            pool = DatabaseConnectionPool(params)
-            g_connection_pools[key] = pool
+        if xpool == None:
+            xpool = DatabaseConnectionPool(params)
+            g_connection_pools[key] = xpool
         else:
-            pool.check(params)
-        return pool
+            xpool.check(params)
+        return xpool
     finally:
         lock.release()
 
@@ -345,7 +326,7 @@ def connect_to_db(params: Dict = None) -> Database:
     "get an instance of the Database wrapper"
 
     if params == None:
-        params = config()
+        params = configuration.read_db_settings()
 
     use_pool = params["pooled"]
 

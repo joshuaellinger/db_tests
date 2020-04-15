@@ -1,7 +1,8 @@
 import pytest
 from loguru import logger
-from shared.database import connect_to_db, config, Database 
 
+from shared.database import connect_to_db, Database 
+from shared.configuration import read_db_settings
 from psycopg2 import OperationalError
 
 @pytest.fixture
@@ -16,7 +17,7 @@ def db():
     #    db.execute("DROP TABLE test_table")
 
 def test_connection():
-    c = config()
+    c = read_db_settings()
     c["pooled"] = False
     db = connect_to_db(c)
     db.close()
@@ -28,14 +29,14 @@ def test_bad_connection():
     with pytest.raises(TypeError) as excinfo:
         connect_to_db({})
 
-    c = config()
+    c = read_db_settings()
     c["pooled"] = False
     c["host"] = "xxxx"
     with pytest.raises(OperationalError) as excinfo:
         connect_to_db(c)
     assert(str(excinfo.value) == 'could not translate host name "xxxx" to address: Unknown host\n')
 
-    c = config()
+    c = read_db_settings()
     c["pooled"] = False
     c["host"] = "covidtracking.com"
     c["connect_timeout"] = 1
@@ -43,21 +44,21 @@ def test_bad_connection():
         connect_to_db(c)
     assert(str(excinfo.value) == 'timeout expired\n')
 
-    c = config()
+    c = read_db_settings()
     c["pooled"] = False
     c["user"] = "xxxx"
     with pytest.raises(OperationalError) as excinfo:
         connect_to_db(c)
     assert(str(excinfo.value) == 'FATAL:  password authentication failed for user "xxxx"\n')
 
-    c = config()
+    c = read_db_settings()
     c["pooled"] = False
     c["password"] = "xxxx"
     with pytest.raises(OperationalError) as excinfo:
         connect_to_db(c)
     assert(str(excinfo.value) == 'FATAL:  password authentication failed for user "covid"\n')
 
-    c = config()
+    c = read_db_settings()
     c["pooled"] = False
     c["database"] = "xxxx"
     with pytest.raises(OperationalError) as excinfo:
