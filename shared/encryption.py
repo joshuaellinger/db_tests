@@ -38,6 +38,45 @@ def decrypt(password: str, encrypted_msg: str) -> str:
     msg = f.decrypt(token).decode()
     return msg
 
+def access_encrypted_file(password: str, path: str) -> str:
+    "decrypt a file for use, returns the path to the contents"
+
+    encrypted_path = path + ".encrypted"
+    temp_path = path + ".tmp"
+    if os.path.exists(temp_path): os.remove(temp_path)
+
+    if os.path.exists(path):
+        # if the file exists, save an encrypted copy and move it to the temp name.
+        with open(path, "r") as f:
+            contents = f.read()
+        encrypted_contents = encrypt(password, contents)
+        with open(encrypted_path, "w") as f:
+            f.write(encrypted_contents)
+        os.rename(path, temp_path)        
+    elif os.path.exists(encrypted_path):
+        # otherwise, decrypt the encrypted copy into the temp name
+        with open(encrypted_path, "r") as f:
+            encrypted_contents = f.read()
+        contents = decrypt(password, encrypted_contents)
+        with open(temp_path, "w") as f:
+            f.write(contents)
+    else:
+        raise Exception(f"Missing both plain and encrypted version of {path}")
+
+    return temp_path
+
+
+def cleanup_encrypted_file(path: str):
+    "delete the temp version of the file"
+
+    if path.endswith(".tmp"):
+        temp_path = path
+    else:
+        temp_path = path + ".tmp"
+    if os.path.exists(temp_path): 
+        os.remove(temp_path)
+
+
 def encrypt_keyed(password: str, msg: str) -> [str, str]:
     "encrypt a message, returns message and salted key"
     key = password_to_key(password, salted=True)
