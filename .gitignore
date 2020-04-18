@@ -3,3 +3,7 @@ __pycache__
 database.ini
 .pytest_cache
 database.ini.old
+
+# db credentials
+credentials-scanner.json
+notes.txt
