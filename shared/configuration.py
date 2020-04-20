@@ -141,6 +141,8 @@ def read_db_settings(file_name='database.ini', section='postgresql') -> Dict:
         "host": "required",
         "database": "required",
         "user": "required",
+        "port": "optional",
+        "sslmode": "optional",
         "password": "required,encrypted",
         "connect_timeout": "optional",
         "pooled": "optional",

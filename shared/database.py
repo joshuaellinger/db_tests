@@ -51,8 +51,10 @@ class Database:
             cursor = conn.cursor()
             if len(args) > 0:
                 cursor.execute(smt, args)
-            else:
+            elif len(kwargs) > 0:
                 cursor.execute(smt, kwargs)
+            else:
+                cursor.execute(smt)
             conn.commit()
         except Exception:
             logger.error(f"execute failed: {smt}")    
@@ -135,6 +137,7 @@ class Database:
         cur, conn = self._query(smt, args, kwargs)
         try:
             row = cur.fetchone()
+            if row == None: return None
             result = { cur.description[i][0]: v for i,v in enumerate(row) }
             return result
         finally:
