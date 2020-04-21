@@ -1,6 +1,5 @@
 -- add recovered to core data
 
-
 -- 1. add the column to the name
 do $$
 begin

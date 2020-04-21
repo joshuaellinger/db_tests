@@ -8,13 +8,13 @@ import hashlib
 class DatabaseOperations:
     " perform database maintainence operations "
 
-    def __init__(self, use_alt_schema: bool):
+    def __init__(self, use_option_a: bool):
         self.base_dir = "."
         self.db = connect_to_db()
         self.schema_dir = "schema"
 
-        if use_alt_schema:
-            self.schema_dir = "schema_alt"
+        if use_option_a:
+            self.schema_dir = "schema_option_a"
 
     def _load_file(self, file_name: str):
         file_path = os.path.join(self.base_dir, self.schema_dir, file_name)
@@ -45,7 +45,7 @@ class DatabaseOperations:
             label = rec["label"]
             dt = rec["applied_at"]
             logger.info(f"  file {fn} already applied - {label}")
-            if check_sum != rec["check_sum"]:
+            if check_sum != rec["content_checksum"]:
                 logger.error(f"  file {fn} content changed since being applied at {dt}")
                 return False
         elif not content.startswith("--"):
@@ -56,6 +56,7 @@ class DatabaseOperations:
             idx = content.index("\n")
             label = re.sub(r"-+", "", content[0:idx]).strip()
 
+            logger.info(f"  file {fn} apply - {label}")
             self.db.execute(content)
 
             self.db.execute(f"insert into schema_info (schema_info_id, applied_at, label, content_checksum) values (%s, now(), %s, %s)",

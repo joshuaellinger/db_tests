@@ -20,8 +20,8 @@ def load_args_parser() -> ArgumentParser:
         help='enable debug traces')
 
     parser.add_argument(
-        '--alt', dest='use_alt_schema', action='store_true', default=False,
-        help='use alternative schema')
+        '--opta', dest='use_option_a', action='store_true', default=False,
+        help='use option a')
 
     return parser
 
@@ -33,10 +33,10 @@ def main() -> None:
 
     if args.enable_debug:
         logger.info("DEBUG is on")
-    if args.use_alt_schema:
-        logger.info("USE ALT SCHEMA")
+    if args.use_option_a:
+        logger.info("USE OPTION A")
 
-    db_ops = DatabaseOperations(args.use_alt_schema)
+    db_ops = DatabaseOperations(args.use_option_a)
 
     op = args.operation
     if op == "init":
