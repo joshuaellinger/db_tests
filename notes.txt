@@ -1,0 +1,9 @@
+username = doadmin
+password = etbvcl2qop0gpig5
+host = db-covid-test-do-user-1513767-0.a.db.ondigitalocean.com
+port = 25060
+database = defaultdb
+sslmode = require
+
+josh: eadx4ctssr4uft48
+
