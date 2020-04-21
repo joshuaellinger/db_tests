@@ -31,7 +31,7 @@ create table release
 	shift_lead varchar(2) not null,
 	release_date date not null, -- date that the update is for (same as as-of)
 	release_time time not null, -- time that shift normally publishes
-	shift_num int not null, -- 1=morning,2=afternoon,3=evneing.
+	shift_num int not null, -- 1=morning,2=afternoon,3=evening.
 	released_at timestamptz, -- when the data was released to the public
 	is_released boolean not null, -- true if data has been released to public
 	is_revision boolean not null, -- true if it is revising public data
