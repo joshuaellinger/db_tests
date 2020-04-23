@@ -180,11 +180,13 @@ begin
 		raise Exception 'Cannot release results twice';
 	end if;
 
-	delete from core_data where release_id != p_release_id and is_preview = true;
-	update core_data set is_preview = false where release_id = p_release_id;
-	update release set is_preview = false where release_id = p_release_id;
+	begin
+		delete from core_data where release_id != p_release_id and is_preview = true;
+		update core_data set is_preview = false where release_id = p_release_id;
+		update release set is_preview = false where release_id = p_release_id;
 
-	delete from core_data where release_id != p_release_id and is_daily_commit = false;
-
+		delete from core_data where release_id != p_release_id and is_daily_commit = false;
+		commit;
+	end
 end;
 $$;
