@@ -89,7 +89,8 @@ insert into temp_data (state_name,
 	('WA', 10694, 112160, 541, 122854, 'C', '2020-04-15 10:30-04', '2020-04-15 11:30-04', 'cl', 'ek', null);
 
 call add_core_data(release_id, 'temp_data');
-call commit_release(release_id, '4/15/20 10:30:10');
+
+--call commit_release(release_id, '4/15/20 10:30:10');
 
 
 end;

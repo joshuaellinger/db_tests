@@ -284,6 +284,12 @@ begin
 
 	update release set is_released = true, released_at = p_released_time
 	where release_id = p_release_id and is_released = false;
+
+	refresh materialized view historical_data;
+	refresh materialized view historical_data_preview;
+	refresh materialized view current_data;
+	refresh materialized view current_data_preview;
+
 end;
 $$;
 

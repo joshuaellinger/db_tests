@@ -17,6 +17,7 @@ drop materialized view if exists current_data;
 drop materialized view if exists current_data_preview;
 
 drop table if exists core_data;
+drop table if exists temp_data;
 drop table if exists release;
 drop table if exists state_info;
 

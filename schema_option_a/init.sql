@@ -15,6 +15,14 @@ create table schema_info
 	content_checksum varchar(100)
 );
 
+--- meta-data on states
+create table state_info
+(
+	state_name char(2) primary key not null,
+	full_name varchar(100) not null
+);
+
+
 --- a record of the output of a shift (called 'commits' in the engineering doc)
 create table release
 (
@@ -31,7 +39,7 @@ create table core_data
 (
 	-- context fields
 	release_id int not null references release(release_id),
-	state_name varchar(2) not null,
+	state_name varchar(2) not null references state_info(state_name),
 	as_of date not null, -- (called date in engineering doc)
 	is_daily_commit boolean not null, -- added to enable unique index
 	
@@ -52,7 +60,30 @@ create table core_data
 	public_notes varchar(1000)
 );
 
-create unique index ix_state_asof on core_data (state_name, as_of, is_daily_commit);
+create unique index ix_release_state_asof on core_data (release_id, state_name, as_of, is_daily_commit);
+
+-- temp table for loading data
+create table temp_data
+(
+	-- context fields
+	state_name varchar(2) not null,
+
+	-- data fields
+	positive int,
+	negative int,
+	deaths int,
+	total int,
+	grade char(1),
+
+	-- data entry fields
+	last_update_time timestamptz not null,
+	last_checked_time timestamptz not null,
+	checker varchar(2) not null,
+	double_checker varchar(2) not null,
+	private_notes varchar(1000),
+	source_notes varchar(1000),
+	public_notes varchar(1000)
+);
 
 ---
 --- Views
@@ -108,14 +139,17 @@ order by D.state_name;
 
 -- create a new release
 create procedure create_release(in p_shift_lead varchar(2), 
-			in p_commit_note varchar(1000), p_is_daily_commit boolean, inout xid int)
+			p_is_daily_commit boolean, in p_commit_note varchar(1000), inout xid int)
 language plpgsql
 as $$
 begin
 
-  insert into release (shift_lead, push_time, commit_note, is_daily_commit, is_preview) 
-    values (p_shift_lead, now(), p_commit_note, p_is_daily_commit, true)
-  returning xid;
+	delete from core_data D
+	where D.release_id in (select release_id from release where is_preview = true);
+
+	insert into release (shift_lead, push_time, commit_note, is_daily_commit, is_preview) 
+		values (p_shift_lead, now(), p_commit_note, p_is_daily_commit, true);
+	xid := lastval();
 end;
 $$;
 
@@ -140,7 +174,7 @@ begin
 
   delete from core_data where release_id = p_release_id;
 
-  for rec in execute concat('select * from', p_table_name) 
+  for rec in execute concat('select * from ', p_table_name) 
   loop
   	insert into core_data (release_id, state_name, as_of, is_daily_commit,
 
@@ -150,7 +184,7 @@ begin
 		last_update_time, last_checked_time, checker, double_checker,
 		private_notes, source_notes, public_notes)
 
-	values (p_release_id, rec.state_name, rec.as_of, release_record.is_daily_commit,  
+	values (p_release_id, rec.state_name, date(rec.last_update_time), release_record.is_daily_commit,  
 		
 		-- data fields --
 		rec.positive, rec.negative, rec.deaths, rec.total, rec.grade,
@@ -164,7 +198,7 @@ $$;
 
 
 -- release to public
-create procedure commit_release(in p_release_id int)
+create procedure commit_release(in p_release_id int, in p_push_time timestamptz)
 language plpgsql
 as $$
 declare
@@ -181,12 +215,14 @@ begin
 	end if;
 
 	begin
-		delete from core_data where release_id != p_release_id and is_preview = true;
-		update core_data set is_preview = false where release_id = p_release_id;
 		update release set is_preview = false where release_id = p_release_id;
-
 		delete from core_data where release_id != p_release_id and is_daily_commit = false;
-		commit;
-	end
+	end;
+
+	refresh materialized view historical_data;
+	refresh materialized view historical_data_preview;
+	refresh materialized view current_data;
+	refresh materialized view current_data_preview;
+
 end;
 $$;

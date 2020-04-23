@@ -15,6 +15,14 @@ create table schema_info
 	content_checksum varchar(100)
 );
 
+--- meta-data on states
+create table state_info
+(
+	state_name char(2) primary key not null,
+	full_name varchar(100) not null
+);
+
+
 --- a record of the output of a shift (called 'commits' in the engineering doc)
 create table release
 (
