@@ -138,7 +138,7 @@ begin
 	raise Exception 'Cannot update results after release';
   end if;
 
-  delete from core_data where release_id = p_release_id and is_daily_commit = release_record%is_daily_commit;
+  delete from core_data where release_id = p_release_id;
 
   for rec in execute concat('select * from', p_table_name) 
   loop
@@ -167,12 +167,24 @@ $$;
 create procedure commit_release(in p_release_id int)
 language plpgsql
 as $$
+declare
+	release_record record;
 begin
 
-	delete from core_data where release_id != p_release_id and (
-		is_preview = true or is_daily_commit = false);
+	select * into release_record from release where release_id = p_release_id;
 
-	update release set is_preview = false
-	where release_id = p_release_id and is_preview = true;
+	if release_record is null then
+		raise Exception 'Invalid p_release_id %s', p_release_id;
+	end if;
+	if not release_record%is_preview then
+		raise Exception 'Cannot release results twice';
+	end if;
+
+	delete from core_data where release_id != p_release_id and is_preview = true;
+	update core_data set is_preview = false where release_id = p_release_id;
+	update release set is_preview = false where release_id = p_release_id;
+
+	delete from core_data where release_id != p_release_id and is_daily_commit = false;
+
 end;
 $$;
