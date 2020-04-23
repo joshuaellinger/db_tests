@@ -1,42 +1,98 @@
---- populate tables
-
+do $$
+declare
+   release_id int;
+begin
 
  -- just a couple of states
  insert into state_info (state_name, full_name) values
-  ('NY', 'New York'),  ('FL', 'Florida'),  ('TX', 'Texas'), ('WA', 'Washington');
+  ('NY', 'New York'),  ('WA', 'Washington');
 
--- simulate a normal day + a revision on the following morning b/c CA came in too late
-insert into release (created_at, shift_lead, release_date, release_time, shift_num, is_released, is_revision, is_publish, release_note) values
-	(now() - interval '3 days' - interval '7 hours', 'ek', '4/14/20', '5:00', 2, true, false, true, 'normal publish'),
-	(now() - interval '2 days' - interval '12 hours', 'ek', '4/14/20', '12:00', 1, true, false, false, 'normal push'),
-	(now() - interval '2 days' - interval '7 hours', 'ek', '4/14/20', '5:00', 2, true, false, true, 'normal publish'),
-	(now() - interval '2 days' - interval '0 hours', 'ek', '4/14/20', '23:00', 3, true, false, false, 'normal push'),
-	(now() - interval '1 days' - interval '16 hours', 'ek', '4/14/20', '5:00', 2, true, true, true, 'revision for west coast'),
-	(now() - interval '1 days' - interval '12 hours', 'ek', '4/15/20', '12:00', 1, false, false, false, 'preview for shift 1');
 
-update release set released_at = created_at + interval '15 minutes' where is_released = True;
-	
--- NY: pretend update at 3:30 every day.
-insert into core_data (release_id, state_name, date_rev_key, as_of, revision, positive, negative, deaths, total, grade,
-					   updated_at, checked_at, checked_by, double_checked_by, public_note) 
+-- 4/13/20 afternoon shift
+call create_release('ek', '4/13/20', '17:00', 2, false, true, 'normal publish', release_id);
+
+delete from temp_data;
+insert into temp_data (state_name,
+					positive, negative, deaths, total, grade,
+					last_update_time, last_checked_time, checker, double_checker, public_notes) 
 	values
-	(1, 'NY', 2020041302, '4/13/20', 2, 195031,	283326, 10056, 478357, 'A', '2020-04-13 15:30-04', '2020-04-14 11:30-04', 'cl', 'ek', null),
-	(2, 'NY', 2020041401, '4/14/20', 1, 195031,	283326, 10056, 478357, 'A', '2020-04-13 15:30-04', '2020-04-14 11:30-04', 'cl', 'ek', null),
-	(3, 'NY', 2020041402, '4/14/20', 2, 202208,	296935, 10834, 499143, 'A', '2020-04-14 15:30-04', '2020-04-14 16:30-04', 'cl', 'ek', null),
-	(4, 'NY', 2020041403, '4/14/20', 3, 202208,	296935, 10834, 499143, 'A', '2020-04-14 15:30-04', '2020-04-14 23:30-04', 'cl', 'ek', null),
-	(6, 'NY', 2020041501, '4/15/20', 1, 202208,	296935, 10834, 499143, 'A', '2020-04-14 15:30-04', '2020-04-15 11:30-04', 'cl', 'ek', null);
-	
--- FL: skipped...
--- TX: skipped...
+	('NY', 195031, 283326, 10056, 478357, 'A', '2020-04-13 15:30-04', '2020-04-14 11:30-04', 'cl', 'ek', null),
+	('WA', 10411, 83391, 508, 93802, 'C', '2020-04-13 18:30-04', '2020-04-14 11:30-04', 'cl', 'ek', null);
 
--- WA: pretend it comes in at 6:30PM on 4/14 after the cutoff then during shift 1 on the 4/15
-insert into core_data (release_id, state_name, date_rev_key, as_of, revision, positive, negative, deaths, total, grade,
-					   updated_at, checked_at, checked_by, double_checked_by, public_note) 
-	values	
-	(1, 'WA', 2020041302, '4/13/20', 2, 10411, 83391, 508, 93802, 'C', '2020-04-13 18:30-04', '2020-04-14 11:30-04', 'cl', 'ek', null),
-	(2, 'WA', 2020041401, '4/14/20', 1, 10411, 83391, 508, 93802, 'C', '2020-04-13 18:30-04', '2020-04-14 11:30-04', 'cl', 'ek', null),
-	(3, 'WA', 2020041402, '4/14/20', 2, 10411, 83391, 508, 93802, 'C', '2020-04-13 18:30-04', '2020-04-14 16:30-04', 'cl', 'ek', null),
-	(4, 'WA', 2020041403, '4/14/20', 3, 10538, 83391, 516, 93929, 'C', '2020-04-14 18:30-04', '2020-04-14 23:30-04', 'cl', 'ek', 'nothing new as-of 5pm'),
-	(5, 'WA', 2020041404, '4/14/20', 4, 10538, 83391, 516, 93929, 'C', '2020-04-14 18:30-04', '2020-04-14 23:30-04', 'cl', 'ek', 'data arrived late'),
-	(6, 'WA', 2020041501, '4/15/20', 1, 10694, 112160, 541, 122854, 'C', '2020-04-15 10:30-04', '2020-04-15 11:30-04', 'cl', 'ek', null);
-	
+call add_core_data(release_id, 'temp_data');
+call commit_release(release_id, '4/13/20 16:30:10');
+
+-- 4/14/20 morning shift
+call create_release('ek', '4/14/20', '12:00', 1, false, false, 'normal push', release_id);
+
+delete from temp_data;
+insert into temp_data (state_name,
+					positive, negative, deaths, total, grade,
+					last_update_time, last_checked_time, checker, double_checker, public_notes) 
+	values
+	('NY', 195031, 283326, 10056, 478357, 'A', '2020-04-13 15:30-04', '2020-04-14 11:30-04', 'cl', 'ek', null),
+	('WA', 10411, 83391, 508, 93802, 'C', '2020-04-13 18:30-04', '2020-04-14 11:30-04', 'cl', 'ek', null);
+
+call add_core_data(release_id, 'temp_data');
+call commit_release(release_id, '4/13/20 11:30:10');
+
+-- 4/14/20 afternoon shift
+call create_release('ek', '4/14/20', '17:00', 2, false, true, 'normal publish', release_id);
+
+delete from temp_data;
+insert into temp_data (state_name,
+					positive, negative, deaths, total, grade,
+					last_update_time, last_checked_time, checker, double_checker, public_notes) 
+	values
+	('NY', 202208, 296935, 10834, 499143, 'A', '2020-04-14 15:30-04', '2020-04-14 16:30-04', 'cl', 'ek', null),
+	('WA', 10411, 83391, 508, 93802, 'C', '2020-04-13 18:30-04', '2020-04-14 16:30-04', 'cl', 'ek', null);
+
+call add_core_data(release_id, 'temp_data');
+call commit_release(release_id, '4/14/20 16:30:10');
+
+-- 4/14/20 revision to afternoon shift for west coast
+call create_release('ek', '4/14/20', '17:00', 4,  true, true, 'revision for west coast', release_id);
+
+delete from temp_data;
+insert into temp_data (state_name,
+					positive, negative, deaths, total, grade,
+					last_update_time, last_checked_time, checker, double_checker, public_notes) 
+	values
+	('WA', 10538, 83391, 516, 93929, 'C', '2020-04-14 18:30-04', '2020-04-14 23:30-04', 'cl', 'ek', 'data arrived late');
+
+call add_core_data(release_id, 'temp_data');
+call commit_release(release_id, '4/14/20 20:30:10');
+
+-- 4/14/20 evening shift
+call create_release('ek', '4/14/20', '23:00', 3,  false, false, 'normal push', release_id);
+
+delete from temp_data;
+insert into temp_data (state_name,
+					positive, negative, deaths, total, grade,
+					last_update_time, last_checked_time, checker, double_checker, public_notes) 
+	values
+	('NY', 202208, 296935, 10834, 499143, 'A', '2020-04-14 15:30-04', '2020-04-14 23:30-04', 'cl', 'ek', null),
+	('WA', 10538, 83391, 516, 93929, 'C', '2020-04-14 18:30-04', '2020-04-14 23:30-04', 'cl', 'ek', 'nothing new as-of 5pm');
+
+call add_core_data(release_id, 'temp_data');
+call commit_release(release_id, '4/14/20 22:30:10');
+
+-- 4/15/20 morning shift (in preview)
+call create_release('ek', '4/15/20', '12:00', 1,  false, false, 'preview', release_id);
+
+delete from temp_data;
+insert into temp_data (state_name,
+					positive, negative, deaths, total, grade,
+					last_update_time, last_checked_time, checker, double_checker, public_notes) 
+	values
+	('NY', 202208, 296935, 10834, 499143, 'A', '2020-04-14 15:30-04', '2020-04-15 11:30-04', 'cl', 'ek', null),
+	('WA', 10694, 112160, 541, 122854, 'C', '2020-04-15 10:30-04', '2020-04-15 11:30-04', 'cl', 'ek', null);
+
+call add_core_data(release_id, 'temp_data');
+call commit_release(release_id, '4/15/20 10:30:10');
+
+
+end;
+$$;
+
+

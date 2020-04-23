@@ -36,7 +36,7 @@ create table release
 	is_released boolean not null, -- true if data has been released to public
 	is_revision boolean not null, -- true if it is revising public data
     is_publish boolean not null, -- true for 2nd shift only
-	release_note varchar(1000) not null
+	commit_note varchar(1000) not null
 );
 
 -- core data from spreadsheet
@@ -67,14 +67,40 @@ create table core_data
 	qc_note varchar(1000),
 
 	-- data entry fields
-	updated_at timestamptz not null,
-	checked_at timestamptz not null,
-	checked_by varchar(2) not null,
-	double_checked_by varchar(2) not null
+	last_update_time timestamptz not null,
+	last_checked_time timestamptz not null,
+	checker varchar(2) not null,
+	double_checker varchar(2) not null,
+	private_notes varchar(1000),
+	source_notes varchar(1000),
+	public_notes varchar(1000)
 );
 
 create unique index ix_state_date_rev_key on core_data (state_name, date_rev_key);
 create unique index ix_state_asof_revision on core_data (state_name, as_of, revision);
+
+-- temp table for loading data
+create table temp_data
+(
+	-- context fields
+	state_name varchar(2) not null,
+
+	-- data fields
+	positive int,
+	negative int,
+	deaths int,
+	total int,
+	grade char(1),
+
+	-- data entry fields
+	last_update_time timestamptz not null,
+	last_checked_time timestamptz not null,
+	checker varchar(2) not null,
+	double_checker varchar(2) not null,
+	private_notes varchar(1000),
+	source_notes varchar(1000),
+	public_notes varchar(1000)
+);
 
 ---
 --- Views
@@ -143,27 +169,33 @@ join
 ---
 
 -- create a new release
-create procedure create_release(in p_shift_lead varchar(2), in p_release_date date, in p_release_time time, in p_shift_num int, 
-							  in p_is_revision bool, in p_is_publish bool, inout xid int)
+create procedure create_release(in p_shift_lead varchar(2), in p_release_date date, in p_release_time time, 
+		in p_shift_num int, 
+		in p_is_revision bool, in p_is_publish bool, 
+		in p_commit_note varchar(1000),
+		inout xid int)
 language plpgsql
 as $$
 begin
   if p_shift_num <= 3 then
-	if p_shift_num != 2 and p_is_publish == true then
+	if p_shift_num != 2 and p_is_publish then
 		raise Exception 'Only shift #2 is allowed to publish';
 	end if;
-	if  p_is_revision == true then
+	if  p_is_revision then
 		raise Exception 'Shift numbers 1-3 cannot be revisions';
 	end if;
   else
-	if p_is_revision == false then
+	if not p_is_revision then
 		raise Exception 'Shift numbers above 3 must be revisions';
 	end if;
   end if;
 
-  insert into release (shift_lead, created_at, release_date, release_time, shift_num, is_released, is_revision, is_publish) 
-    values (p_shift_lead, now(), p_release_date, p_release_time, p_shift_num, false, p_is_revision, p_is_publish)
-  returning xid;
+  insert into release (shift_lead, created_at, release_date, release_time, shift_num, 
+  		is_released, is_revision, is_publish, commit_note) 
+    values (p_shift_lead, now(), p_release_date, p_release_time, p_shift_num, 
+		false, p_is_revision, p_is_publish, p_commit_note);
+
+  xid := lastval();
 end;
 $$;
 
@@ -186,44 +218,48 @@ begin
     raise Exception 'Invalid p_release_id %', p_release_id;
   end if;
 
-  if release_record.is_released == true then
+  if release_record.is_released then
 	raise exception 'Data for batch % has already been released', p_batch_id;
   end if;
 
   delete from core_data where release_id = p_release_id;
 
-  for rec in execute concat('select * from', p_table_name) 
+  for rec in execute concat('select * from ', p_table_name) 
   loop
-	select max(version) into version_num
+	select max(revision) into version_num
 	from core_data
-	where state_name = rec.state_name and as_of = rec.as_of;
+	where state_name = rec.state_name and as_of = release_record.release_date;
  
 	if version_num is null then 
-		version_num = 1;
+		version_num := 1;
 	else
-		version_num = version_num + 1;
+		version_num := version_num + 1;
 	end if;
 
-	date_rev_key = cast(concat(convert(rec.as_of, "YYYMMDD"), substring(convert(version_num), "00")) as int);
+	date_rev_key = cast(concat(to_char(release_record.release_date, 'YYYYMMDD'), substring(to_char(version_num, '00'), 2,3)) as int);
 
 	insert into core_data (release_id, state_name, date_rev_key, as_of, revision, 
+
 					-- data fields --
 					positive, negative, deaths, total, grade,
-			
-					updated_at, checked_at, checked_by, double_checked_by, public_notes) 
-		values (p_release_id, rec.state_name, date_rev_key, rec.as_of, version_num, 
+
+					last_update_time, last_checked_time, checker, double_checker, 
+					private_notes, source_notes, public_notes) 
+		values (p_release_id, rec.state_name, date_rev_key, release_record.release_date, version_num, 
 		   
 			-- data fields --
 			rec.positive, rec.negative, rec.deaths, rec.total, rec.grade,
 
-			rec.updated_at, rec.checked_at, rec.checked_by, rec.double_checked_by, rec.public_notes);
+			rec.last_update_time, rec.last_checked_time, rec.checker, rec.double_checker, 
+			rec.private_notes, rec.source_notes, rec.public_notes);
+
   end loop;
   
 end;
 $$;
 
 -- release to public
-create procedure commit_release(in p_release_id int)
+create procedure commit_release(in p_release_id int, in p_released_time timestamptz)
 language plpgsql
 as $$
 declare
@@ -238,11 +274,15 @@ begin
 		raise Exception 'Invalid p_release_id %', p_release_id;
 	end if;
 
-	if release_record.is_released == true then
+	if release_record.is_released then
 		raise exception 'Data for batch % has already been released', p_batch_id;
 	end if;
 
-	update release set is_released = true, released_at = now()
+	if p_released_time is null then
+		p_released_time := CURRENT_TIMESTAMP;
+	end if;
+
+	update release set is_released = true, released_at = p_released_time
 	where release_id = p_release_id and is_released = false;
 end;
 $$;

@@ -9,12 +9,14 @@ if not exists (
 		from information_schema.columns 
 		where table_name = 'core_data' and column_name = 'recovered') then
 	alter table core_data add column recovered int;
+	alter table temp_data add column recovered int;
 end if;
 end;
 $$;
 
 -- 2. update the add_data proc
-create or replace procedure add_data(in p_release_id int, in p_table_name varchar(100))
+-- add data from temporary table to release
+create procedure add_core_data(in p_release_id int, in p_table_name varchar(100))
 language plpgsql
 as $$
 
@@ -28,15 +30,21 @@ begin
   from release
   where release_id = p_release_id;
 
-  if release_record%is_released == true then
-	raise exception 'Data for batch %s has already been released', p_batch_id;
+  if release_record is null then
+    raise Exception 'Invalid p_release_id %', p_release_id;
   end if;
 
-  for rec in execute concat('select * from', p_table_name) 
+  if release_record.is_released then
+	raise exception 'Data for batch % has already been released', p_batch_id;
+  end if;
+
+  delete from core_data where release_id = p_release_id;
+
+  for rec in execute concat('select * from ', p_table_name) 
   loop
 	select max(version) into version_num
 	from core_data
-	where location = rec%location and as_of = rec%as_of;
+	where state_name = rec.state_name and as_of = rec.as_of;
  
 	if version_num is null then 
 		version_num = 1;
@@ -44,19 +52,22 @@ begin
 		version_num = version_num + 1;
 	end if;
 
-	date_rev_key = cast(concat(convert(rec%as_of, "YYYMMDD"), substring(convert(version_num), "00")) as int);
+	date_rev_key = cast(concat(convert(rec.as_of, "YYYMMDD"), substring(convert(version_num), "00")) as int);
 
-	insert into core_data (p_release_id, location_name, date_rev_key, as_of, revision, 
+	insert into core_data (release_id, state_name, date_rev_key, as_of, revision, 
+
 					-- data fields --
-					positive, negative, recovered, deaths, total, grade,
-			
-					updated_at, checked_at, checked_by, double_checked_by, public_notes) 
-		values (p_release_id, rec%location_name, date_rev_key, rec%as_of, version_num, 
+					positive, negative, deaths, total, grade, recovered,
+
+					last_update_time, last_checked_time, checker, double_checker, 
+					private_notes, source_notes, public_notes) 
+		values (p_release_id, rec.state_name, date_rev_key, rec.as_of, version_num, 
 		   
 			-- data fields --
-			rec%positive, rec%negative, rec%recovered, rec%deaths, rec%total, rec%grade,
+			rec.positive, rec.negative, rec.deaths, rec.total, rec.grade, rec.recovered,
 
-			rec%updated_at, rec%checked_at, rec%checked_by, rec%double_checked_by, rec%public_notes);
+			rec.last_update_time, rec.last_checked_time, rec.checker, rec.double_checker, 
+			rec.private_notes, rec.source_notes, rec.public_notes);
   end loop;
   
 end;
