@@ -20,8 +20,14 @@ def load_args_parser() -> ArgumentParser:
         help='enable debug traces')
 
     parser.add_argument(
-        '--opta', dest='use_option_a', action='store_true', default=False,
+        '-a', dest='use_option_a', action='store_true', default=False,
         help='use option a')
+    parser.add_argument(
+        '-b', dest='use_option_b', action='store_true', default=False,
+        help='use option b')
+    parser.add_argument(
+        '-c', dest='use_option_c', action='store_true', default=False,
+        help='use option c')
 
     return parser
 
@@ -33,10 +39,22 @@ def main() -> None:
 
     if args.enable_debug:
         logger.info("DEBUG is on")
-    if args.use_option_a:
-        logger.info("USE OPTION A")
 
-    db_ops = DatabaseOperations(args.use_option_a)
+    option = "option-c"
+    if args.use_option_a:
+        option = "option-a"
+        logger.info("USE OPTION A")
+    elif args.use_option_b:
+        option = "option-b"
+        logger.info("USE OPTION B")
+    elif args.use_option_c:
+        option = "option-c"
+        logger.info("USE OPTION C")
+    else:
+        option = "option-c"
+        logger.info("DEFAULT TO OPTION C")
+
+    db_ops = DatabaseOperations(option)
 
     op = args.operation
     if op == "init":

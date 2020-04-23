@@ -8,13 +8,14 @@ import hashlib
 class DatabaseOperations:
     " perform database maintainence operations "
 
-    def __init__(self, use_option_a: bool):
-        self.base_dir = "."
-        self.db = connect_to_db()
-        self.schema_dir = "schema"
+    def __init__(self, option: str):
 
-        if use_option_a:
-            self.schema_dir = "schema_option_a"
+        if not option in ["option-a", "option-b", "option-c"]:
+            raise Exception(f"Invalid option {option}")
+
+        self.base_dir = "."
+        self.db = connect_to_db(option)
+        self.schema_dir = "schema_" + option.replace("-", "_")
 
     def _load_file(self, file_name: str):
         file_path = os.path.join(self.base_dir, self.schema_dir, file_name)

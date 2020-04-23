@@ -85,7 +85,7 @@ class Configuration():
             file_path = os.path.join(p, filename)
             if os.path.exists(file_path): return file_path
 
-        raise Exception("Could not find {0}".format(filename))
+        raise Exception("Could not find file {0}".format(filename))
 
     def load_section(self, section: str, validation: Dict = None) -> Dict:
         """load a section from a config file into a Dict with validation
@@ -133,7 +133,7 @@ class Configuration():
 
 # -------------------------
 
-def read_db_settings(file_name='database.ini', section='postgresql') -> Dict:
+def read_db_settings(file_name='database.ini', section='postgresql-local') -> Dict:
     "read the database setting out of an .ini file"
 
     config = Configuration(file_name)

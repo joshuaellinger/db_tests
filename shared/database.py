@@ -1,5 +1,5 @@
 from loguru import logger
-from typing import Dict, List, Tuple
+from typing import Union, Dict, List, Tuple
 import os
 from threading import Lock
 
@@ -325,11 +325,13 @@ def find_pool(params: Dict) -> DatabaseConnectionPool:
         lock.release()
 
 # ----------------------------------
-def connect_to_db(params: Dict = None) -> Database:
-    "get an instance of the Database wrapper"
+def connect_to_db(params_or_section: Union[Dict, str] = None) -> Database:
+    "get an instance of the Database wrapper, pass in either a section name or a dictionary"
 
-    if params == None:
+    if params_or_section == None:
         params = configuration.read_db_settings()
+    elif type(params_or_section) == str:
+        params = configuration.read_db_settings("database.ini", params_or_section)
 
     use_pool = params["pooled"]
 
