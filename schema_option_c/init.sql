@@ -81,7 +81,7 @@ create unique index ix_state_asof_revision on core_data (state_name, as_of, revi
 ---
 
 -- all the history that has been released
-create materialized view historial_data
+create materialized view historical_data
 as
 select D.*
 from core_data D
@@ -96,7 +96,7 @@ join
 order by as_of, D.state_name;
 
 -- history including preview (if any) for QC
-create materialized view historial_data_preview
+create materialized view historical_data_preview
 as
 select D.*
 from core_data D
@@ -183,11 +183,11 @@ begin
   where release_id = p_release_id;
 
   if release_record is null then
-    raise Exception 'Invalid p_release_id %s', p_release_id;
+    raise Exception 'Invalid p_release_id %', p_release_id;
   end if;
 
-  if release_record%is_released == true then
-	raise exception 'Data for batch %s has already been released', p_batch_id;
+  if release_record.is_released == true then
+	raise exception 'Data for batch % has already been released', p_batch_id;
   end if;
 
   delete from core_data where release_id = p_release_id;
@@ -196,7 +196,7 @@ begin
   loop
 	select max(version) into version_num
 	from core_data
-	where state_name = rec%state_name and as_of = rec%as_of;
+	where state_name = rec.state_name and as_of = rec.as_of;
  
 	if version_num is null then 
 		version_num = 1;
@@ -204,19 +204,19 @@ begin
 		version_num = version_num + 1;
 	end if;
 
-	date_rev_key = cast(concat(convert(rec%as_of, "YYYMMDD"), substring(convert(version_num), "00")) as int);
+	date_rev_key = cast(concat(convert(rec.as_of, "YYYMMDD"), substring(convert(version_num), "00")) as int);
 
 	insert into core_data (release_id, state_name, date_rev_key, as_of, revision, 
 					-- data fields --
 					positive, negative, deaths, total, grade,
 			
 					updated_at, checked_at, checked_by, double_checked_by, public_notes) 
-		values (p_release_id, rec%state_name, date_rev_key, rec%as_of, version_num, 
+		values (p_release_id, rec.state_name, date_rev_key, rec.as_of, version_num, 
 		   
 			-- data fields --
-			rec%positive, rec%negative, rec%deaths, rec%total, rec%grade,
+			rec.positive, rec.negative, rec.deaths, rec.total, rec.grade,
 
-			rec%updated_at, rec%checked_at, rec%checked_by, rec%double_checked_by, rec%public_notes);
+			rec.updated_at, rec.checked_at, rec.checked_by, rec.double_checked_by, rec.public_notes);
   end loop;
   
 end;
@@ -226,7 +226,22 @@ $$;
 create procedure commit_release(in p_release_id int)
 language plpgsql
 as $$
+declare
+  release_record record;
 begin
+
+	select * into release_record
+	from release
+	where release_id = p_release_id;
+
+	if release_record is null then
+		raise Exception 'Invalid p_release_id %', p_release_id;
+	end if;
+
+	if release_record.is_released == true then
+		raise exception 'Data for batch % has already been released', p_batch_id;
+	end if;
+
 	update release set is_released = true, released_at = now()
 	where release_id = p_release_id and is_released = false;
 end;

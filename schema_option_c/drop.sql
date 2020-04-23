@@ -9,8 +9,11 @@ drop procedure if exists add_core_data;
 drop procedure if exists release_changes; --old
 drop procedure if exists commit_release;
 
-drop materialized view if exists historial_data;
-drop materialized view if exists historial_data_preview;
+drop materialized view if exists historial_data; --typo
+drop materialized view if exists historial_data_preview; v
+
+drop materialized view if exists historical_data;
+drop materialized view if exists historical_data_preview;
 drop materialized view if exists current_data;
 drop materialized view if exists current_data_preview;
 
