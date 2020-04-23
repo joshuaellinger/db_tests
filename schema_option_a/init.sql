@@ -59,7 +59,7 @@ create unique index ix_state_asof on core_data (state_name, as_of, is_daily_comm
 ---
 
 -- the history
-create materialized view historial_data
+create materialized view historical_data
 as
 select D.*
 from core_data D
@@ -68,7 +68,7 @@ where R.is_preview = false and R.is_daily_commit = True
 order by as_of, state_name;
 
 -- the history for preview
-create materialized view historial_data_preview
+create materialized view historical_data_preview
 as
 select D.*
 from core_data D
@@ -132,9 +132,9 @@ begin
   select * into release_record from release where release_id = p_release_id;
 
   if release_record is null then
-    raise Exception 'Invalid p_release_id %s', p_release_id;
+    raise Exception 'Invalid p_release_id %', p_release_id;
   end if;
-  if not release_record%is_preview then
+  if not release_record.is_preview then
 	raise Exception 'Cannot update results after release';
   end if;
 
@@ -150,13 +150,13 @@ begin
 		last_update_time, last_checked_time, checker, double_checker,
 		private_notes, source_notes, public_notes)
 
-	values (p_release_id, rec%state_name, rec%as_of, release_record%is_daily_commit,  
+	values (p_release_id, rec.state_name, rec.as_of, release_record.is_daily_commit,  
 		
 		-- data fields --
-		rec%positive, rec%negative, rec%deaths, rec%total, rec%grade,
+		rec.positive, rec.negative, rec.deaths, rec.total, rec.grade,
 
-		rec%last_update_time, rec%last_checked_time, rec%checker, rec%double_checker,
-		rec%private_notes, rec%source_notes, rec%public_notes);
+		rec.last_update_time, rec.last_checked_time, rec.checker, rec.double_checker,
+		rec.private_notes, rec.source_notes, rec.public_notes);
   end loop;
   
 end;
@@ -174,9 +174,9 @@ begin
 	select * into release_record from release where release_id = p_release_id;
 
 	if release_record is null then
-		raise Exception 'Invalid p_release_id %s', p_release_id;
+		raise Exception 'Invalid p_release_id %', p_release_id;
 	end if;
-	if not release_record%is_preview then
+	if not release_record.is_preview then
 		raise Exception 'Cannot release results twice';
 	end if;
 
