@@ -12,7 +12,7 @@ def load_args_parser() -> ArgumentParser:
         description=__doc__,
         formatter_class=RawDescriptionHelpFormatter)
 
-    parser.add_argument('operation', choices=['drop', 'init', 'upgrade', 'load-sample', 'load-checks'],
+    parser.add_argument('operation', choices=['drop', 'init', 'upgrade', 'load-sample', 'run-test', 'load-checks'],
         help='database actions')
 
     parser.add_argument(
@@ -22,9 +22,6 @@ def load_args_parser() -> ArgumentParser:
     parser.add_argument(
         '-a', dest='use_option_a', action='store_true', default=False,
         help='use option a')
-    parser.add_argument(
-        '-b', dest='use_option_b', action='store_true', default=False,
-        help='use option b')
     parser.add_argument(
         '-c', dest='use_option_c', action='store_true', default=False,
         help='use option c')
@@ -44,9 +41,6 @@ def main() -> None:
     if args.use_option_a:
         option = "option-a"
         logger.info("USE OPTION A")
-    elif args.use_option_b:
-        option = "option-b"
-        logger.info("USE OPTION B")
     elif args.use_option_c:
         option = "option-c"
         logger.info("USE OPTION C")
@@ -65,6 +59,8 @@ def main() -> None:
         db_ops.drop_all()
     elif op == "load-sample":
         db_ops.load_sample()
+    elif op == "run-test":
+        db_ops.run_test()
     elif op == "load-checks":
         db_ops.load_checks()
     else:

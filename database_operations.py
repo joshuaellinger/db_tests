@@ -17,17 +17,26 @@ class DatabaseOperations:
         self.db = connect_to_db(option)
         self.schema_dir = "schema_" + option.replace("-", "_")
 
-    def _load_file(self, file_name: str):
+    def _load_file(self, file_name: str, allow_missing: bool = False) -> str:
         file_path = os.path.join(self.base_dir, self.schema_dir, file_name)
         if not os.path.exists(file_path): 
+            if allow_missing: return None
             raise Exception(f"File {file_path} does not exist")
         
         with open(file_path, "r") as f:
             return f.read()
 
     def init_schema(self):
-        content = self._load_file("init.sql")
-        self.db.execute(content)
+        content = self._load_file("init.sql", allow_missing=True)
+        if content: 
+            self.db.execute(content)            
+        else:
+            content = self._load_file("tables.sql")
+            self.db.execute(content)
+            content = self._load_file("views.sql")
+            self.db.execute(content)
+            content = self._load_file("procedures.sql")
+            self.db.execute(content)
 
     def drop_all(self):
         content = self._load_file("drop.sql")
@@ -93,6 +102,36 @@ class DatabaseOperations:
 
     def load_sample(self):
         content = self._load_file("sample_data.sql")
+        self.db.execute(content)
+
+
+    def run_test(self):
+        content = self._load_file("external_queries.sql", allow_missing=True)
+        if content == None:
+            logger.warning(f"  not tests defined (missing external_queries.sql)")
+            return
+
+
+        cnt = 1
+
+        items = content.split(";")
+        for smt in items:
+            idx = smt.find("/*")
+            eidx = smt.find("*/")
+            msg = smt[idx:eidx+2].strip()
+            qry = smt[eidx+2:].strip()
+            logger.info(f"================| query {cnt:02} =============")
+            print(f"{msg}\n")
+
+            if len(qry) == 0:
+                logger.info("not implemented")
+                continue
+
+            print(f"{qry}\n")
+            df = self.db.query_frame(qry)
+            print(f"result = \n{df}\n\n")
+            cnt += 1
+
         self.db.execute(content)
 
 

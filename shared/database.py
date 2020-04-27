@@ -169,6 +169,9 @@ class Database:
         finally:
             self.finish_query(cur, conn)
 
+    def _lookup_code_name(self, oid: int) -> str:
+        return self.query_one("select typname from pg_type where oid = %s", oid)
+
     def _load_dtype_map(self):
         recs = self.query_many("""
 SELECT oid, typname
@@ -177,8 +180,8 @@ where typname in (
     'bool', 
     'int2', 'int4', 'int8', 
     'float4', 'float8',
-    'char', 'text', 'varchar',
-    'date')
+    'bpchar', 'text', 'varchar',
+    'date', 'timestamptz')
 """)
 
         names_to_dtypes = {
@@ -188,10 +191,11 @@ where typname in (
             'int8': np.int64,
             'float4': np.float,
             'float8': np.double,
-            'char': np.char,
+            'bpchar': np.str, # grr-- numpy doesn't support a single char.
             'text': np.str,
             'varchar': np.str,
-            'date': date
+            'date': date,
+            'timestamptz': datetime,
         }
 
         results = {}
@@ -204,8 +208,12 @@ where typname in (
         
         dtype = self.dtype_map.get(descr.type_code)
         if dtype == None:
-            raise Exception(f"Column {descr.name} has an unsupported type_code ({descr.type_code}")
-        return np.zeros(nrows, dtype=dtype)
+            code_name = self._lookup_code_name(descr.type_code)
+            raise Exception(f"Column {descr.name} has an unsupported type_code ({descr.type_code}), maps to {code_name}")
+        try:
+            return np.zeros(nrows, dtype=dtype)
+        except Exception as ex:
+            raise Exception(f"Invalid dtype {dtype} for {descr}", ex)
 
     def query_frame(self, smt: str, *args, **kwargs) -> pd.DataFrame:
         " query multiple rows (returns a data frame)"
