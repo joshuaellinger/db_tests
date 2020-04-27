@@ -12,7 +12,7 @@ join
     select D.state_name, max(D.batch_id) as batch_id
     from core_data D
     join batch B on B.batch_id = D.batch_id
-    where B.is_preview and B.is_daily_commit
+    where not B.is_preview and B.is_daily_commit
     group by D.state_name
 ) B on B.batch_id = D.batch_id and D.state_name = B.state_name
 order by D.data_date, D.state_name;
@@ -42,7 +42,7 @@ join
     select D.state_name, max(D.batch_id) as batch_id
     from core_data D
     join batch B on B.batch_id = D.batch_id
-    where B.is_preview 
+    where not B.is_preview 
     group by D.state_name
 ) B on B.batch_id = D.batch_id and D.state_name = B.state_name
 order by D.state_name;
