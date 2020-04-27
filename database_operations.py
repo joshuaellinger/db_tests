@@ -112,25 +112,25 @@ class DatabaseOperations:
             return
 
 
-        cnt = 1
-
         items = content.split(";")
-        for smt in items:
+        for cnt, smt in enumerate(items):
             idx = smt.find("/*")
             eidx = smt.find("*/")
             msg = smt[idx:eidx+2].strip()
             qry = smt[eidx+2:].strip()
-            logger.info(f"================| query {cnt:02} =============")
+
+            if len(msg) == 0: continue
+
+
+            logger.info(f"================| query {cnt+1:02} =============")    
             print(f"{msg}\n")
 
             if len(qry) == 0:
                 logger.info("not implemented")
-                continue
-
-            print(f"{qry}\n")
-            df = self.db.query_frame(qry)
-            print(f"result = \n{df}\n\n")
-            cnt += 1
+            else:
+                print(f"{qry}\n")
+                df = self.db.query_frame(qry)
+                print(f"result = \n{df}\n\n")
 
         self.db.execute(content)
 

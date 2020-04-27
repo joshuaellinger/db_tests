@@ -28,8 +28,8 @@ create table batch
     shift_lead varchar(100), -- design question: initials vs names
     batch_note varchar,
     is_daily_commit boolean not null,
-    is_preview boolean not null
-    -- is_revision boolean not null -- removed to keep it simple - je
+    is_preview boolean not null,
+    is_revision boolean not null
 );
 
 -- core data from spreadsheet

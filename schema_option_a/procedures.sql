@@ -5,7 +5,8 @@
 
 -- create a new batch
 create procedure create_batch(in p_shift_lead varchar(2), in p_created_at timestamptz,
-			p_is_daily_commit boolean, in p_batch_note varchar(1000), inout xid int)
+			in p_is_daily_commit boolean, in p_is_revision boolean, 
+			in p_batch_note varchar(1000), inout xid int)
 language plpgsql
 as $$
 begin
@@ -15,8 +16,8 @@ begin
 	where D.batch_id in (select batch_id from batch where is_preview = true);
 	delete from batch D where is_preview = true;
     
-	insert into batch (shift_lead, created_at, batch_note, is_daily_commit, is_preview) 
-		values (p_shift_lead, p_created_at, p_batch_note, p_is_daily_commit, true);
+	insert into batch (shift_lead, created_at, batch_note, is_daily_commit, is_revision, is_preview) 
+		values (p_shift_lead, p_created_at, p_batch_note, p_is_daily_commit, p_is_revision, true);
 	xid := lastval();
 end;
 $$;

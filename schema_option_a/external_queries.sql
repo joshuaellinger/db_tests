@@ -55,16 +55,14 @@ WHERE D.state_name = 'NY' and B.is_daily_commit and not B.is_preview
 ORDER BY B.published_at;
 
 /* Website: What's the latest day we have published data on? */
-;
+SELECT date(max(B.published_at)) as last_date
+FROM batch B
+WHERE not B.is_preview and not B.is_revision;
 
 /* QC: What states have stale data for today? */
-;
-
-/* QC: What's did we originally publish on a given shift? */
-;
-
-/* DE: What are the values that we're about to publish? */
-;
-
-/* QC: What days are we showing a decrease in a cumulative values?  say positives */
-;
+SELECT D.state_name, D.data_date 
+FROM core_data D
+JOIN batch B ON B.batch_id = D.batch_id
+WHERE B.is_daily_commit and not B.is_preview and
+   date(B.published_at) != D.data_date
+ORDER BY D.state_name;
