@@ -23,6 +23,9 @@ def load_args_parser() -> ArgumentParser:
         '-a', dest='use_option_a', action='store_true', default=False,
         help='use option a')
     parser.add_argument(
+        '-b', dest='use_option_b', action='store_true', default=False,
+        help='use option b')
+    parser.add_argument(
         '-c', dest='use_option_c', action='store_true', default=False,
         help='use option c')
 
@@ -41,6 +44,9 @@ def main() -> None:
     if args.use_option_a:
         option = "option-a"
         logger.info("USE OPTION A")
+    if args.use_option_b:
+        option = "option-b"
+        logger.info("USE OPTION B")
     elif args.use_option_c:
         option = "option-c"
         logger.info("USE OPTION C")

@@ -40,7 +40,7 @@ create table release
 );
 
 -- core data from spreadsheet
---   state_name + as_ok + revision must be unique.
+--   state_name + as_of + revision must be unique.
 --   as_of is the same as the release's as_of but included to eliminate the need to join in the batch
 --   date_rev_key is a redundant field to make the views simpler.
 --      it contains as_of + revision started as YYYYMMDDXX where XX = revision 
