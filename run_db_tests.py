@@ -44,7 +44,7 @@ def main() -> None:
     if args.use_option_a:
         option = "option-a"
         logger.info("USE OPTION A")
-    if args.use_option_b:
+    elif args.use_option_b:
         option = "option-b"
         logger.info("USE OPTION B")
     elif args.use_option_c:
